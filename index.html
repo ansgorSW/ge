@@ -102,7 +102,7 @@ const VIDEO = /\.(mp4|webm|mov|m4v)$/i;
 const TEXT = /\.(html?|css|js|json|md|txt|svg|xml|csv)$/i;
 const PW_HASH = 'vbtwavfi0j';
 let tab = 'files', cur = null, repo = '', branch = '', tree = [], videoUrl = null;
-const TOKEN_ENC = '';   // hier wird später der verschlüsselte Token eingefügt
+const TOKEN_ENC = 'U29JNmxNNDc2UUYzS1NaWHRHQVU2UmxJNG94N0tJblJOY0RMSnlwUVlqejZQeGF0eGFqMWQ1WUd5M2hfMkhQeVY0eGNxenRtMElWRFhTNUIxMV90YXBfYnVodGln';   // hier wird später der verschlüsselte Token eingefügt
 const token = () => localStorage.getItem('ghtok') || (TOKEN_ENC ? atob(TOKEN_ENC).split('').reverse().join('') : '');
 
 function hash(s){
