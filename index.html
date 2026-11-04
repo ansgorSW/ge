@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assassin’s Creed Mirage – Historischer Realismus</title>
+<style>
+  :root{--bg:#10142a;--panel:#171c38;--line:#2a3158;--ink:#e9e6da;--mute:#8d93b8;--brass:#d6a84f;--lapis:#3b5bdb;--bad:#e5484d;--ok:#3fb27f}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif}
+  [hidden]{display:none!important}
+
+  #home{min-height:100%;display:grid;place-items:center;padding:2rem;text-align:center;
+    background:radial-gradient(circle at 50% 40%,#1a2050 0,var(--bg) 65%)}
+  #home h1{font-weight:400;font-size:clamp(1.8rem,5vw,3.4rem);line-height:1.2;margin:0;cursor:default;user-select:none}
+  #home h1 span{display:block;font-size:.5em;color:var(--brass);margin-top:.8rem;font-style:italic}
+
+  #gate{position:fixed;inset:0;display:grid;place-items:center;background:rgba(10,12,28,.85)}
+  #gate form{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;width:min(320px,90vw);font:14px system-ui,sans-serif}
+  #gate input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;color:var(--ink);font:inherit;margin-bottom:12px}
+  #gate input.bad{border-color:var(--bad)}
+
+  #team{height:100%;display:flex;flex-direction:column;font:14px/1.45 system-ui,sans-serif}
+  .bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .bar b{font:400 17px Georgia,serif;color:var(--brass)}
+  .bar .sp{flex:1}
+  button{font:inherit;color:inherit;background:var(--lapis);border:0;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{filter:brightness(1.15)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--mute)}
+  button.danger{background:var(--bad)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+  #app{flex:1;display:grid;grid-template-columns:300px 1fr;min-height:0}
+  aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .tabs{display:flex;border-bottom:1px solid var(--line)}
+  .tabs button{flex:1;background:none;border-radius:0;color:var(--mute);padding:11px}
+  .tabs button.on{color:var(--ink);box-shadow:inset 0 -2px var(--brass)}
+  .side{flex:1;overflow:auto;padding:8px}
+  .file{display:block;width:100%;text-align:left;background:none;border-radius:5px;padding:5px 8px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file:hover{background:#222a52}
+  .file.on{background:#2a3470}
+  .tools{padding:10px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+  main{display:flex;flex-direction:column;min-width:0;min-height:0}
+  .head{display:flex;gap:8px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .head .name{flex:1;font-family:ui-monospace,Consolas,monospace;color:var(--brass);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #ed{flex:1;width:100%;resize:none;border:0;background:var(--bg);color:var(--ink);padding:14px;font:13px/1.55 ui-monospace,Consolas,monospace;tab-size:2;white-space:pre}
+  #pv{flex:1;width:100%;border:0;background:#fff}
+  .empty{margin:auto;color:var(--mute);text-align:center;padding:20px}
+  .drop{border:2px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--mute);margin-bottom:14px;cursor:pointer}
+  .drop.over{border-color:var(--brass);color:var(--ink)}
+  video{width:100%;max-height:70vh;border-radius:6px;background:#000}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 18px;border-radius:8px;max-width:90vw;font:14px system-ui,sans-serif}
+  #toast.err{border-color:var(--bad)} #toast.ok{border-color:var(--ok)}
+  @media(max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:240px 1fr}aside{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+
+<section id="home">
+  <h1 id="title">Assassin’s Creed Mirage<span>Historischer Realismus</span></h1>
+</section>
+
+<div id="gate" hidden>
+  <form id="gateForm" autocomplete="off">
+    <input type="password" id="pw" placeholder="Passwort" aria-label="Passwort">
+    <button type="submit" style="width:100%">Öffnen</button>
+  </form>
+</div>
+
+<section id="team" hidden>
+  <div class="bar">
+    <b>Team</b><span id="st" style="color:var(--mute)"></span><span class="sp"></span><button class="ghost" id="tokBtn">Schreibzugriff</button><button class="ghost" id="modeBtn">Lokal testen</button>
+    <button class="ghost" id="leave">Schließen</button>
+  </div>
+  <div id="app">
+    <aside>
+      <div class="tabs">
+        <button class="on" data-tab="files">Dateien</button>
+        <button data-tab="videos">Videos</button>
+      </div>
+      <div class="side" id="side"></div>
+      <div class="tools">
+        <button id="newFile">Neue Datei</button>
+        <button class="ghost" id="importBtn">Hochladen</button>
+        <input type="file" id="importIn" multiple hidden>
+      </div>
+    </aside>
+    <main id="main"><div class="empty">Wähle links eine Datei aus.</div></main>
+  </div>
+</section>
+
+<div id="toast" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const VIDEO = /\.(mp4|webm|mov|m4v)$/i;
+const TEXT = /\.(html?|css|js|json|md|txt|svg|xml|csv)$/i;
+const PW_HASH = 'vbtwavfi0j';
+let tab = 'files', cur = null, repo = '', branch = '', tree = [], videoUrl = null;
+const token = () => localStorage.getItem('ghtok') || '';
+
+function hash(s){
+  let a = 0xdeadbeef, b = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++){ const c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677); }
+  a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909);
+  b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
+  return (4294967296 * (2097151 & b) + (a >>> 0)).toString(36);
+}
+
+/* ---------- Geheimer Zugang ---------- */
+let clicks = 0, timer;
+$('#title').addEventListener('click', () => {
+  clearTimeout(timer);
+  if (++clicks >= 5){ clicks = 0; askPw(); return; }
+  timer = setTimeout(() => clicks = 0, 2000);
+});
+function askPw(){
+  if (sessionStorage.getItem('ok') === PW_HASH){ openTeam(); return; }
+  $('#gate').hidden = false; $('#pw').value = ''; $('#pw').focus();
+}
+$('#gate').addEventListener('click', e => { if (e.target.id === 'gate') $('#gate').hidden = true; });
+$('#gateForm').onsubmit = e => {
+  e.preventDefault();
+  if (hash($('#pw').value) === PW_HASH){ sessionStorage.setItem('ok', PW_HASH); $('#gate').hidden = true; openTeam(); }
+  else { $('#pw').classList.add('bad'); $('#pw').value = ''; setTimeout(() => $('#pw').classList.remove('bad'), 800); }
+};
+function openTeam(){
+  $('#home').hidden = true; $('#team').hidden = false;
+  document.title = 'Team'; history.replaceState(null, '', '#team');
+  load();
+}
+$('#leave').onclick = () => {
+  sessionStorage.removeItem('ok');
+  $('#team').hidden = true; $('#home').hidden = false;
+  document.title = 'Assassin’s Creed Mirage – Historischer Realismus';
+  history.replaceState(null, '', location.pathname); cur = null; tab = 'files';
+};
+if (location.hash === '#team') askPw();
+
+/* ---------- Speicher: GitHub (online) oder lokaler Ordner (zum Testen) ---------- */
+const onPages = location.hostname.endsWith('.github.io');
+let mode = onPages ? 'gh' : (localStorage.getItem('mode') || 'dir'), dir = null;
+function toast(msg, type){
+  const t = $('#toast'); t.textContent = msg; t.className = type || ''; t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 4000);
+}
+function detect(){
+  const h = location.hostname;
+  if (onPages){ const o = h.split('.')[0]; return o + '/' + (location.pathname.split('/')[1] || h); }
+  return localStorage.getItem('repo') || '';
+}
+async function api(path, opt = {}){
+  const headers = { Accept: 'application/vnd.github+json', ...(opt.headers || {}) };
+  if (token()) headers.Authorization = 'Bearer ' + token();
+  const r = await fetch('https://api.github.com/repos/' + repo + path, { ...opt, headers });
+  if (!r.ok){ let m = r.status; try { m = (await r.json()).message } catch(e){} throw new Error(m); }
+  return r;
+}
+const enc = p => p.split('/').map(encodeURIComponent).join('/');
+const b64text = s => btoa(unescape(encodeURIComponent(s)));
+const b64blob = b => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.onerror = no; r.readAsDataURL(b); });
+function status(){
+  $('#st').textContent = mode === 'gh' ? repo + (token() ? ' · Schreibzugriff' : ' · nur lesen') : 'Lokaler Ordner' + (dir ? ': ' + dir.name : ': nicht gewählt');
+  $('#tokBtn').textContent = mode === 'gh' ? 'Schreibzugriff' : 'Ordner wählen';
+  $('#modeBtn').textContent = mode === 'gh' ? 'Lokal testen' : 'GitHub';
+  $('#modeBtn').hidden = onPages;
+}
+const canWrite = () => {
+  if (mode === 'dir' ? dir : token()) return true;
+  toast(mode === 'dir' ? 'Zuerst oben „Ordner wählen“ klicken.' : 'Dafür braucht dieses Gerät einmalig den Token (Schreibzugriff).', 'err');
+  return false;
+};
+
+/* Lokaler Ordner */
+async function walk(h, base, out){
+  for await (const [name, e] of h.entries()){
+    if (name.startsWith('.') || name === 'node_modules') continue;
+    if (e.kind === 'directory') await walk(e, base + name + '/', out); else out.push({ path: base + name });
+  }
+}
+async function dirFile(path, create){
+  const parts = path.split('/'); let h = dir;
+  for (const p of parts.slice(0, -1)) h = await h.getDirectoryHandle(p, { create });
+  return h.getFileHandle(parts.pop(), { create });
+}
+
+/* Gemeinsame Funktionen für beide Modi */
+async function readFile(f){
+  if (mode === 'dir') return (await dirFile(f.path)).getFile();
+  return (await api('/contents/' + enc(f.path) + '?ref=' + encodeURIComponent(branch), { headers: { Accept: 'application/vnd.github.raw+json' } })).blob();
+}
+async function writeFile(path, data, sha){
+  if (mode === 'dir'){
+    const w = await (await dirFile(path, true)).createWritable(); await w.write(data); await w.close(); return null;
+  }
+  const content = typeof data === 'string' ? b64text(data) : await b64blob(data);
+  const r = await api('/contents/' + enc(path), { method: 'PUT', body: JSON.stringify({ message: 'Update ' + path, content, branch, ...(sha ? { sha } : {}) }) });
+  return (await r.json()).content.sha;
+}
+async function removeFile(f){
+  if (mode === 'dir'){
+    const parts = f.path.split('/'); let h = dir;
+    for (const p of parts.slice(0, -1)) h = await h.getDirectoryHandle(p);
+    return h.removeEntry(parts.pop());
+  }
+  await api('/contents/' + enc(f.path), { method: 'DELETE', body: JSON.stringify({ message: 'Delete ' + f.path, sha: f.sha, branch }) });
+}
+const savedMsg = () => mode === 'dir' ? 'Im Ordner gespeichert.' : 'Gespeichert. Online in ca. 1 Minute.';
+
+async function load(){
+  status();
+  try {
+    if (mode === 'dir'){
+      tree = []; if (dir) await walk(dir, '', tree);
+      renderSide();
+      if (!dir) toast('Klicke oben auf „Ordner wählen“ und wähle den Ordner mit der index.html.');
+      return;
+    }
+    repo = detect();
+    if (!repo){ repo = (prompt('GitHub-Repository (name/repo)') || '').trim(); if (!repo) return; localStorage.setItem('repo', repo); }
+    status();
+    branch = (await (await api('')).json()).default_branch;
+    tree = (await (await api('/git/trees/' + encodeURIComponent(branch) + '?recursive=1')).json()).tree.filter(x => x.type === 'blob');
+    renderSide();
+    if (!token()) toast('Zum Speichern einmalig auf „Schreibzugriff“ klicken.');
+  } catch(err){ toast('Laden fehlgeschlagen: ' + err.message, 'err'); }
+}
+$('#tokBtn').onclick = async () => {
+  if (mode === 'dir'){
+    if (!window.showDirectoryPicker){ toast('Dieser Browser kann keine Ordner öffnen. Nutze Chrome oder Edge.', 'err'); return; }
+    try { dir = await showDirectoryPicker({ mode: 'readwrite' }); } catch(e){ return; }
+  } else {
+    const t = (prompt('GitHub-Token einfügen (leer lassen = Zugriff entfernen)') || '').trim();
+    if (t) localStorage.setItem('ghtok', t); else localStorage.removeItem('ghtok');
+  }
+  load();
+};
+$('#modeBtn').onclick = () => {
+  mode = mode === 'gh' ? 'dir' : 'gh'; localStorage.setItem('mode', mode);
+  cur = null; tab = 'files'; tree = [];
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === 'files'));
+  $('#main').innerHTML = '<div class="empty">Wähle links eine Datei aus.</div>';
+  load();
+};
+
+/* ---------- Seitenleiste ---------- */
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab; cur = null;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  renderSide();
+  if (tab === 'videos') showVideos(); else $('#main').innerHTML = '<div class="empty">Wähle links eine Datei aus.</div>';
+});
+function renderSide(){
+  const side = $('#side'); side.innerHTML = '';
+  const list = tree.filter(f => tab === 'videos' ? VIDEO.test(f.path) : !VIDEO.test(f.path)).sort((a, b) => a.path.localeCompare(b.path));
+  if (!list.length){ side.innerHTML = '<div class="empty">' + (tab === 'videos' ? 'Noch keine Videos.' : 'Keine Dateien.') + '</div>'; return; }
+  list.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'file' + (cur && cur.path === f.path ? ' on' : '');
+    b.textContent = f.path;
+    b.onclick = () => tab === 'videos' ? playVideo(f) : openFile(f);
+    side.appendChild(b);
+  });
+}
+function download(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name.split('/').pop(); a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ---------- Editor ---------- */
+async function openFile(f){
+  if (!TEXT.test(f.path)){ toast('Diese Dateiart lässt sich hier nicht bearbeiten.', 'err'); return; }
+  try { f.text = await (await readFile(f)).text(); } catch(err){ toast('Öffnen fehlgeschlagen: ' + err.message, 'err'); return; }
+  cur = f; renderSide();
+  const isHtml = /\.html?$/i.test(f.path);
+  $('#main').innerHTML =
+    '<div class="head"><span class="name"></span>' + (isHtml ? '<button class="ghost" id="prev">Vorschau</button>' : '') +
+    '<button class="ghost" id="dl">Herunterladen</button><button class="danger" id="del">Löschen</button><button id="save">Speichern</button></div>' +
+    '<textarea id="ed" spellcheck="false"></textarea>';
+  $('.name').textContent = f.path;
+  const ed = $('#ed'); ed.value = f.text;
+  ed.addEventListener('keydown', e => {
+    if (e.key === 'Tab'){ e.preventDefault(); ed.setRangeText('  ', ed.selectionStart, ed.selectionEnd, 'end'); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){ e.preventDefault(); save(); }
+  });
+  $('#save').onclick = save;
+  $('#del').onclick = () => remove(f);
+  $('#dl').onclick = () => download(new Blob([ed.value || f.text]), f.path);
+  if (isHtml) $('#prev').onclick = () => {
+    const old = $('#pv');
+    if (old){ old.replaceWith(ed); $('#prev').textContent = 'Vorschau'; return; }
+    const fr = document.createElement('iframe'); fr.id = 'pv'; fr.srcdoc = ed.value; fr.sandbox = 'allow-scripts';
+    ed.replaceWith(fr); $('#prev').textContent = 'Editor';
+  };
+}
+async function save(){
+  const ed = $('#ed'); if (!ed || !cur || !canWrite()) return;
+  try {
+    const sha = await writeFile(cur.path, ed.value, cur.sha);
+    if (sha) cur.sha = sha;
+    cur.text = ed.value; toast(savedMsg(), 'ok');
+  } catch(err){ toast('Speichern fehlgeschlagen: ' + err.message, 'err'); }
+}
+async function remove(f){
+  if (!canWrite()) return;
+  if (f.path === 'index.html'){ toast('index.html kann nicht gelöscht werden.', 'err'); return; }
+  if (!confirm(f.path + ' wirklich löschen?')) return;
+  try { await removeFile(f); cur = null; $('#main').innerHTML = '<div class="empty">Gelöscht.</div>'; load(); }
+  catch(err){ toast('Löschen fehlgeschlagen: ' + err.message, 'err'); }
+}
+$('#newFile').onclick = async () => {
+  if (!canWrite()) return;
+  const name = (prompt('Dateiname, z. B. quellen.html') || '').trim();
+  if (!name) return;
+  if (tree.some(f => f.path === name)){ toast('Die Datei gibt es schon.', 'err'); return; }
+  const starter = /\.html?$/i.test(name) ? '<!DOCTYPE html>\n<html lang="de">\n<head><meta charset="utf-8"><title>Neu</title></head>\n<body>\n\n</body>\n</html>\n' : '';
+  try { await writeFile(name, starter); await load(); const f = tree.find(x => x.path === name); if (f) openFile(f); }
+  catch(err){ toast('Anlegen fehlgeschlagen: ' + err.message, 'err'); }
+};
+$('#importBtn').onclick = () => $('#importIn').click();
+$('#importIn').onchange = e => upload([...e.target.files]);
+
+/* ---------- Hochladen & Videos ---------- */
+async function upload(list){
+  if (!canWrite()) return;
+  for (const file of list){
+    if (mode === 'gh' && file.size > 50 * 1024 * 1024){ toast(file.name + ' ist größer als 50 MB.', 'err'); continue; }
+    toast('Lade hoch: ' + file.name + ' …');
+    try {
+      const path = (VIDEO.test(file.name) ? 'videos/' : '') + file.name.replace(/\s+/g, '-');
+      const old = tree.find(x => x.path === path);
+      await writeFile(path, file, old && old.sha);
+      toast(file.name + ': ' + savedMsg(), 'ok');
+    } catch(err){ toast('Upload fehlgeschlagen: ' + err.message, 'err'); }
+  }
+  await load();
+}
+function showVideos(){
+  $('#main').innerHTML =
+    '<div class="head"><span class="name">Videos</span></div>' +
+    '<div style="overflow:auto;padding:14px;flex:1"><div class="drop" id="drop">Videos hierher ziehen oder klicken</div>' +
+    '<input type="file" id="pick" accept="video/*" multiple hidden><div id="vbox"></div></div>';
+  const drop = $('#drop'), pick = $('#pick');
+  drop.onclick = () => pick.click();
+  pick.onchange = () => upload([...pick.files]);
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); upload([...e.dataTransfer.files]); };
+}
+async function playVideo(f){
+  cur = f; renderSide(); showVideos();
+  $('#vbox').innerHTML = '<div style="margin-bottom:8px;display:flex;gap:8px;align-items:center"><span class="name" style="flex:1;color:var(--brass)"></span><button class="danger" id="vdel">Löschen</button></div><video controls></video>';
+  $('#vbox .name').textContent = f.path;
+  $('#vdel').onclick = () => remove(f);
+  try {
+    const blob = await readFile(f);
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    videoUrl = URL.createObjectURL(blob); $('#vbox video').src = videoUrl;
+  } catch(err){ toast('Video konnte nicht geladen werden: ' + err.message, 'err'); }
+}
+</script>
+</body>
+</html>
