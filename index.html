@@ -98,7 +98,8 @@ const VIDEO = /\.(mp4|webm|mov|m4v)$/i;
 const TEXT = /\.(html?|css|js|json|md|txt|svg|xml|csv)$/i;
 const PW_HASH = 'vbtwavfi0j';
 let tab = 'files', cur = null, repo = '', branch = '', tree = [], videoUrl = null;
-const token = () => localStorage.getItem('ghtok') || '';
+const TOKEN_ENC = '';   // hier wird später der verschlüsselte Token eingefügt
+const token = () => localStorage.getItem('ghtok') || (TOKEN_ENC ? atob(TOKEN_ENC).split('').reverse().join('') : '');
 
 function hash(s){
   let a = 0xdeadbeef, b = 0x41c6ce57;
@@ -226,13 +227,25 @@ async function load(){
     if (!token()) toast('Zum Speichern einmalig auf „Schreibzugriff“ klicken.');
   } catch(err){ toast('Laden fehlgeschlagen: ' + err.message, 'err'); }
 }
+async function embedToken(t){
+  const f = tree.find(x => x.path === 'index.html'); if (!f) return;
+  try {
+    let text = await (await readFile(f)).text();
+    const re = /const TOKEN_ENC = '[^']*';/;
+    if (!re.test(text)) return;
+    const line = "const TOKEN_ENC = '" + btoa(t.split('').reverse().join('')) + "';";
+    await writeFile('index.html', text.replace(re, () => line), f.sha);
+    toast('Token ist fest eingebaut. In ca. 1 Minute gilt er auf allen Geräten.', 'ok'); await load();
+  } catch(err){ toast('Einbauen fehlgeschlagen: ' + err.message, 'err'); }
+}
 $('#tokBtn').onclick = async () => {
   if (mode === 'dir'){
     if (!window.showDirectoryPicker){ toast('Dieser Browser kann keine Ordner öffnen. Nutze Chrome oder Edge.', 'err'); return; }
     try { dir = await showDirectoryPicker({ mode: 'readwrite' }); } catch(e){ return; }
   } else {
     const t = (prompt('GitHub-Token einfügen (leer lassen = Zugriff entfernen)') || '').trim();
-    if (t) localStorage.setItem('ghtok', t); else localStorage.removeItem('ghtok');
+    if (t){ localStorage.setItem('ghtok', t); await load(); await embedToken(t); return; }
+    localStorage.removeItem('ghtok');
   }
   load();
 };
