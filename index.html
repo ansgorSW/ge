@@ -53,6 +53,30 @@
   #prog{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);width:min(420px,90vw);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font:14px system-ui,sans-serif;z-index:5}
   #prog .pbar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-top:8px}
   #prog i{display:block;height:100%;width:0;background:var(--brass);transition:width .15s}
+  .tabs button{padding:11px 4px;font-size:13px}
+  .row{flex:1;display:flex;min-height:0}
+  .edcol{flex:1;display:flex;min-width:0}
+  #gut{width:54px;overflow:hidden;padding:14px 8px 40px;text-align:right;white-space:pre;color:var(--mute);background:var(--panel);font:13px/1.55 ui-monospace,Consolas,monospace;user-select:none}
+  #ed{overflow:auto}
+  .fbar{display:flex;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line)}
+  .fbar input,.ai textarea,.ai input{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--ink);font:inherit}
+  .fbar input{flex:1;min-width:0}
+  .ai{width:360px;max-width:45%;border-left:1px solid var(--line);background:var(--panel);padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+  .ai h3{margin:0;font:400 18px Georgia,serif;color:var(--brass)}
+  .ai textarea{width:100%;resize:vertical}
+  .ai input{width:70px}
+  .rg{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .dif{border:1px solid var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;font:12px/1.4 ui-monospace,Consolas,monospace}
+  .dif b{display:block;padding:4px 8px;background:var(--bg);font:600 12px system-ui}
+  .dif pre{margin:0;padding:4px 8px;white-space:pre-wrap;word-break:break-all}
+  .dif .o{background:#3a1d24;color:#ffb4b8} .dif .n{background:#17352a;color:#a6e8c8}
+  .dash{padding:24px;overflow:auto}
+  .dash h2{margin:0 0 16px;font:400 24px Georgia,serif;color:var(--brass)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card span{color:var(--mute);display:block} .card b{font:400 26px Georgia,serif}
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+  @media(max-width:900px){.ai{width:100%;max-width:none;border-left:0;border-top:1px solid var(--line)}.row{flex-direction:column}}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 18px;border-radius:8px;max-width:90vw;font:14px system-ui,sans-serif}
   #toast.err{border-color:var(--bad)} #toast.ok{border-color:var(--ok)}
   @media(max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:240px 1fr}aside{border-right:0;border-bottom:1px solid var(--line)}}
@@ -79,8 +103,10 @@
   <div id="app">
     <aside>
       <div class="tabs">
-        <button class="on" data-tab="files">Dateien</button>
+        <button class="on" data-tab="home">Übersicht</button>
+        <button data-tab="files">Dateien</button>
         <button data-tab="videos">Videos</button>
+        <button data-tab="ai">KI</button>
       </div>
       <div class="side" id="side"></div>
       <div class="tools">
@@ -101,8 +127,8 @@ const $ = s => document.querySelector(s);
 const VIDEO = /\.(mp4|webm|mov|m4v)$/i;
 const TEXT = /\.(html?|css|js|json|md|txt|svg|xml|csv)$/i;
 const PW_HASH = 'vbtwavfi0j';
-let tab = 'files', cur = null, repo = '', branch = '', tree = [], videoUrl = null;
-const TOKEN_ENC = 'U29JNmxNNDc2UUYzS1NaWHRHQVU2UmxJNG94N0tJblJOY0RMSnlwUVlqejZQeGF0eGFqMWQ1WUd5M2hfMkhQeVY0eGNxenRtMElWRFhTNUIxMV90YXBfYnVodGln';   // hier wird später der verschlüsselte Token eingefügt
+let tab = 'home', cur = null, repo = '', branch = '', tree = [], videoUrl = null;
+const TOKEN_ENC = '';   // hier wird später der verschlüsselte Token eingefügt
 const token = () => localStorage.getItem('ghtok') || (TOKEN_ENC ? atob(TOKEN_ENC).split('').reverse().join('') : '');
 
 function hash(s){
@@ -139,9 +165,8 @@ $('#leave').onclick = () => {
   sessionStorage.removeItem('ok');
   $('#team').hidden = true; $('#home').hidden = false;
   document.title = 'Assassin’s Creed Mirage – Historischer Realismus';
-  history.replaceState(null, '', location.pathname); cur = null; tab = 'files';
+  history.replaceState(null, '', location.pathname); cur = null; setTab('home');
 };
-if (location.hash === '#team') askPw();
 
 /* ---------- Speicher: GitHub (online) oder lokaler Ordner (zum Testen) ---------- */
 const onPages = location.hostname.endsWith('.github.io');
@@ -232,7 +257,7 @@ async function load(){
   try {
     if (mode === 'dir'){
       tree = []; if (dir) await walk(dir, '', tree);
-      renderSide();
+      loaded();
       if (!dir) toast('Klicke oben auf „Ordner wählen“ und wähle den Ordner mit der index.html.');
       return;
     }
@@ -241,7 +266,7 @@ async function load(){
     status();
     branch = (await (await api('')).json()).default_branch;
     tree = (await (await api('/git/trees/' + encodeURIComponent(branch) + '?recursive=1')).json()).tree.filter(x => x.type === 'blob');
-    renderSide();
+    loaded();
     if (!token()) toast('Zum Speichern einmalig auf „Schreibzugriff“ klicken.');
   } catch(err){ toast('Laden fehlgeschlagen: ' + err.message, 'err'); }
 }
@@ -269,19 +294,20 @@ $('#tokBtn').onclick = async () => {
 };
 $('#modeBtn').onclick = () => {
   mode = mode === 'gh' ? 'dir' : 'gh'; localStorage.setItem('mode', mode);
-  cur = null; tab = 'files'; tree = [];
-  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === 'files'));
-  $('#main').innerHTML = '<div class="empty">Wähle links eine Datei aus.</div>';
-  load();
+  cur = null; tree = []; setTab('home'); load();
 };
 
 /* ---------- Seitenleiste ---------- */
-document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
-  tab = b.dataset.tab; cur = null;
-  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+const tabBtns = document.querySelectorAll('.tabs button');
+function setTab(t){
+  tab = t; cur = null;
+  tabBtns.forEach(x => x.classList.toggle('on', x.dataset.tab === t));
   renderSide();
-  if (tab === 'videos') showVideos(); else $('#main').innerHTML = '<div class="empty">Wähle links eine Datei aus.</div>';
-});
+  if (t === 'videos') showVideos(); else if (t === 'home') showHome();
+  else $('#main').innerHTML = '<div class="empty">Wähle links eine Datei aus' + (t === 'ai' ? ', die die KI bearbeiten soll' : '') + '.</div>';
+}
+tabBtns.forEach(b => b.onclick = () => setTab(b.dataset.tab));
+function loaded(){ renderSide(); if (tab === 'home' && !cur) showHome(); }
 function renderSide(){
   const side = $('#side'); side.innerHTML = '';
   const list = tree.filter(f => tab === 'videos' ? VIDEO.test(f.path) : !VIDEO.test(f.path)).sort((a, b) => a.path.localeCompare(b.path));
@@ -298,39 +324,67 @@ function download(blob, name){
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name.split('/').pop(); a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+function showHome(){
+  const vids = tree.filter(f => VIDEO.test(f.path)).length, fl = tree.length - vids;
+  const size = tree.reduce((a, f) => a + (f.size || 0), 0);
+  const cards = [['Dateien', fl], ['Videos', vids], ['Größe', size ? (size / 1048576).toFixed(1) + ' MB' : '–'], ['Modus', mode === 'gh' ? 'GitHub' : 'Lokal']];
+  $('#main').innerHTML = '<div class="dash"><h2>Übersicht</h2><div class="cards">' +
+    cards.map(c => '<div class="card"><span>' + c[0] + '</span><b>' + c[1] + '</b></div>').join('') +
+    '</div><div class="acts"><button id="qn">Neue Datei</button><button class="ghost" id="qv">Video hochladen</button><button class="ghost" id="qa">KI öffnen</button></div></div>';
+  $('#qn').onclick = () => $('#newFile').click(); $('#qv').onclick = () => setTab('videos'); $('#qa').onclick = () => setTab('ai');
+}
 
 /* ---------- Editor ---------- */
+function gutter(){
+  const ed = $('#ed'); if (!ed) return;
+  $('#gut').textContent = Array.from({ length: ed.value.split('\n').length }, (_, i) => i + 1).join('\n');
+  $('#gut').scrollTop = ed.scrollTop;
+}
+function mark(){ const ed = $('#ed'); if (ed && cur) $('.name').textContent = cur.path + (ed.value !== cur.text ? ' ●' : ''); }
 async function openFile(f){
   if (!TEXT.test(f.path)){ toast('Diese Dateiart lässt sich hier nicht bearbeiten.', 'err'); return; }
   try { f.text = await (await readFile(f)).text(); } catch(err){ toast('Öffnen fehlgeschlagen: ' + err.message, 'err'); return; }
+  if (tab === 'home' || tab === 'videos'){ tab = 'files'; tabBtns.forEach(x => x.classList.toggle('on', x.dataset.tab === 'files')); }
   cur = f; renderSide();
   const isHtml = /\.html?$/i.test(f.path);
+  const ai = '<div class="ai"><h3>KI-Assistent</h3>' +
+    '<div class="rg">Zeilen <input id="a1" type="number" min="1" placeholder="von"> – <input id="a2" type="number" min="1" placeholder="bis"><button class="ghost" id="asel">Markierung</button></div>' +
+    '<textarea id="ap" rows="4" placeholder="Was soll die KI ändern? z. B. Mach den Titel größer und blau."></textarea>' +
+    '<div class="rg"><button id="asend">Mit KI senden</button><button class="ghost" id="acopy">Prompt kopieren</button><button class="ghost" id="akey">API-Key</button></div>' +
+    '<textarea id="ar" rows="4" placeholder="Oder: Antwort einer KI (JSON) hier einfügen …"></textarea>' +
+    '<div class="rg"><button class="ghost" id="atr">Übersetzen &amp; Vorschau</button></div><div id="aout"></div></div>';
   $('#main').innerHTML =
-    '<div class="head"><span class="name"></span>' + (isHtml ? '<button class="ghost" id="prev">Vorschau</button>' : '') +
+    '<div class="head"><span class="name"></span><button class="ghost" id="fnd">Suchen</button>' + (isHtml ? '<button class="ghost" id="prev">Vorschau</button>' : '') +
     '<button class="ghost" id="dl">Herunterladen</button><button class="danger" id="del">Löschen</button><button id="save">Speichern</button></div>' +
-    '<textarea id="ed" spellcheck="false"></textarea>';
-  $('.name').textContent = f.path;
-  const ed = $('#ed'); ed.value = f.text;
+    '<div class="fbar" id="fbar" hidden><input id="fi" placeholder="Suchen"><input id="ri" placeholder="Ersetzen durch"><button class="ghost" id="fa">Alle ersetzen</button><span id="fc" style="color:var(--mute)"></span></div>' +
+    '<div class="row"><div class="edcol"><div id="gut"></div><textarea id="ed" spellcheck="false" wrap="off"></textarea></div>' + (tab === 'ai' ? ai : '') + '</div>';
+  const ed = $('#ed'); ed.value = f.text; mark(); gutter();
+  ed.addEventListener('input', () => { gutter(); mark(); });
+  ed.addEventListener('scroll', () => { $('#gut').scrollTop = ed.scrollTop; });
   ed.addEventListener('keydown', e => {
-    if (e.key === 'Tab'){ e.preventDefault(); ed.setRangeText('  ', ed.selectionStart, ed.selectionEnd, 'end'); }
+    if (e.key === 'Tab'){ e.preventDefault(); ed.setRangeText('  ', ed.selectionStart, ed.selectionEnd, 'end'); gutter(); mark(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 's'){ e.preventDefault(); save(); }
   });
   $('#save').onclick = save;
   $('#del').onclick = () => remove(f);
-  $('#dl').onclick = () => download(new Blob([ed.value || f.text]), f.path);
+  $('#dl').onclick = () => download(new Blob([ed.value]), f.path);
+  $('#fnd').onclick = () => { $('#fbar').hidden = !$('#fbar').hidden; $('#fi').focus(); };
+  $('#fi').oninput = () => { const q = $('#fi').value; $('#fc').textContent = q ? (ed.value.split(q).length - 1) + ' Treffer' : ''; };
+  $('#fa').onclick = () => { const q = $('#fi').value; if (!q) return; ed.value = ed.value.split(q).join($('#ri').value); gutter(); mark(); $('#fi').oninput(); };
   if (isHtml) $('#prev').onclick = () => {
-    const old = $('#pv');
-    if (old){ old.replaceWith(ed); $('#prev').textContent = 'Vorschau'; return; }
+    const col = $('.edcol'), old = $('#pv');
+    if (old){ old.replaceWith(col); $('#prev').textContent = 'Vorschau'; return; }
     const fr = document.createElement('iframe'); fr.id = 'pv'; fr.srcdoc = ed.value; fr.sandbox = 'allow-scripts';
-    ed.replaceWith(fr); $('#prev').textContent = 'Editor';
+    col.replaceWith(fr); $('#prev').textContent = 'Editor';
   };
+  if (tab === 'ai') bindAi();
 }
 async function save(){
   const ed = $('#ed'); if (!ed || !cur || !canWrite()) return;
   try {
     const sha = await writeFile(cur.path, ed.value, cur.sha);
     if (sha) cur.sha = sha;
-    cur.text = ed.value; toast(savedMsg(), 'ok');
+    cur.text = ed.value; mark(); toast(savedMsg(), 'ok');
   } catch(err){ toast('Speichern fehlgeschlagen: ' + err.message, 'err'); }
 }
 async function remove(f){
@@ -339,6 +393,86 @@ async function remove(f){
   if (!confirm(f.path + ' wirklich löschen?')) return;
   try { await removeFile(f); cur = null; $('#main').innerHTML = '<div class="empty">Gelöscht.</div>'; load(); }
   catch(err){ toast('Löschen fehlgeschlagen: ' + err.message, 'err'); }
+}
+
+/* ---------- KI-Assistent: Übersetzer ersetzt Zeilen im offenen Editor ---------- */
+let pending = null, undoText = null;
+function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function aiRange(){
+  const n = $('#ed').value.split('\n').length;
+  let a = +$('#a1').value || 1, b = +$('#a2').value || n;
+  a = Math.max(1, Math.min(a, n)); b = Math.max(a, Math.min(b, n)); return [a, b];
+}
+function aiPrompt(){
+  const [a, b] = aiRange(), L = $('#ed').value.split('\n');
+  const code = L.slice(a - 1, b).map((t, i) => (a + i) + '| ' + t).join('\n');
+  return 'Du bearbeitest die Datei "' + cur.path + '". Die Zeilen sind nummeriert (Format "Nr| Code"). Antworte NUR mit JSON, ohne Erklärung, in diesem Format:\n' +
+    '{"edits":[{"start":12,"end":14,"text":"neuer Code"}]}\n' +
+    'start und end sind Zeilennummern des Originals (inklusive). "text" ersetzt diese Zeilen (ohne Zeilennummern). Leerer text löscht die Zeilen. end = start-1 fügt vor Zeile start ein. Ändere nur das Nötige.\n\n' +
+    'Aufgabe: ' + $('#ap').value + '\n\nCode (Zeilen ' + a + '-' + b + '):\n' + code;
+}
+function translate(){
+  const out = $('#aout'); out.textContent = ''; pending = null;
+  const m = $('#ar').value.match(/\{[\s\S]*\}/);
+  let list;
+  try { list = JSON.parse(m[0]).edits; if (!Array.isArray(list) || !list.length) throw 0; }
+  catch(e){ out.textContent = 'Antwort nicht lesbar. Erwartet wird JSON mit "edits".'; return; }
+  const L = $('#ed').value.split('\n');
+  list = list.map(e => ({ s: +e.start, e: +e.end, t: String(e.text == null ? '' : e.text) })).sort((a, b) => a.s - b.s);
+  for (let i = 0; i < list.length; i++){
+    const x = list[i];
+    if (!(x.s >= 1 && x.e >= x.s - 1 && x.e <= L.length) || (i && x.s <= list[i - 1].e)){ out.textContent = 'Ungültiger Zeilenbereich in der Antwort (Zeile ' + x.s + '–' + x.e + ').'; return; }
+  }
+  pending = list;
+  list.forEach(x => {
+    const box = el('div', 'dif'); box.appendChild(el('b', '', x.e < x.s ? 'Einfügen vor Zeile ' + x.s : 'Zeilen ' + x.s + '–' + x.e));
+    if (x.e >= x.s) box.appendChild(el('pre', 'o', L.slice(x.s - 1, x.e).slice(0, 8).join('\n')));
+    if (x.t !== '') box.appendChild(el('pre', 'n', x.t.split('\n').slice(0, 8).join('\n')));
+    out.appendChild(box);
+  });
+  const rg = el('div', 'rg'), ok = el('button', '', 'Anwenden'), no = el('button', 'ghost', 'Verwerfen');
+  ok.onclick = applyEdits; no.onclick = () => { pending = null; out.textContent = ''; };
+  rg.append(ok, no); out.appendChild(rg);
+}
+function applyEdits(){
+  const ed = $('#ed'), out = $('#aout'); if (!pending) return;
+  undoText = ed.value; const L = ed.value.split('\n');
+  [...pending].sort((a, b) => b.s - a.s).forEach(x => L.splice(x.s - 1, x.e - x.s + 1, ...(x.t === '' ? [] : x.t.split('\n'))));
+  ed.value = L.join('\n'); gutter(); mark(); pending = null;
+  out.textContent = 'Angewendet. Noch nicht gespeichert. ';
+  const u = el('button', 'ghost', 'Rückgängig'); u.onclick = () => { ed.value = undoText; gutter(); mark(); out.textContent = 'Rückgängig gemacht.'; };
+  out.appendChild(u);
+}
+function bindAi(){
+  const ed = $('#ed');
+  $('#asel').onclick = () => {
+    const v = ed.value;
+    $('#a1').value = v.slice(0, ed.selectionStart).split('\n').length;
+    $('#a2').value = v.slice(0, ed.selectionEnd).split('\n').length;
+  };
+  $('#acopy').onclick = async () => {
+    if (!$('#ap').value.trim()){ toast('Bitte zuerst eine Aufgabe eingeben.', 'err'); return; }
+    try { await navigator.clipboard.writeText(aiPrompt()); toast('Prompt kopiert. Einer KI geben und die Antwort unten einfügen.', 'ok'); }
+    catch(e){ prompt('Prompt kopieren:', aiPrompt()); }
+  };
+  $('#akey').onclick = () => {
+    const k = (prompt('Anthropic-API-Key (bleibt nur in diesem Browser; leer = entfernen)') || '').trim();
+    if (k) localStorage.setItem('aikey', k); else localStorage.removeItem('aikey');
+  };
+  $('#atr').onclick = translate;
+  $('#asend').onclick = async () => {
+    const key = localStorage.getItem('aikey');
+    if (!key){ toast('Erst „API-Key“ eintragen – oder „Prompt kopieren“ nutzen.', 'err'); return; }
+    if (!$('#ap').value.trim()){ toast('Bitte eine Aufgabe eingeben.', 'err'); return; }
+    $('#aout').textContent = 'KI arbeitet …';
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-sonnet-5-5', max_tokens: 4000, messages: [{ role: 'user', content: aiPrompt() }] }) });
+      const j = await r.json(); if (!r.ok) throw new Error((j.error && j.error.message) || r.status);
+      $('#ar').value = j.content.map(c => c.text || '').join(''); translate();
+    } catch(err){ $('#aout').textContent = ''; toast('KI-Fehler: ' + err.message, 'err'); }
+  };
 }
 $('#newFile').onclick = async () => {
   if (!canWrite()) return;
@@ -400,6 +534,9 @@ async function playVideo(f){
     videoUrl = URL.createObjectURL(blob); $('#vbox video').src = videoUrl;
   } catch(err){ toast('Video konnte nicht geladen werden: ' + err.message, 'err'); }
 }
+
+/* Beim Neuladen im Team-Bereich wieder öffnen (muss ganz am Ende stehen) */
+if (location.hash === '#team') askPw();
 </script>
 </body>
 </html>
