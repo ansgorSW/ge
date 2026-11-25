@@ -10,3 +10,5 @@ Analyse grober aufbau:in echt mehr grün
                       In echt wesentlich kleiner
                       fluss im spiel größer (brücken fehlen)
                       die ganze stadt ist im spiel viel mehr wüste
+
+Analyse detail:die innere stadt mauer hat einen wasser graben im spiel
